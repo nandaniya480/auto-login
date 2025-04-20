@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "Work Time Tracker",
+  "version": "1.0",
+  "description": "Shows today's total in-time and escape time.",
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "permissions": [],
+  "background": {
+    "service_worker": "background.js"
+  }
+}

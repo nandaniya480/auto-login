@@ -74,19 +74,6 @@ function processPunchData(token) {
 
         const finalData = {};
 
-        // fetchPunchDataForDate(token, sessionId, formattedYesterday, (date, times) => {
-        //     finalData[date] = times;
-
-        //     fetchPunchDataForDate(token, sessionId, formattedToday, (date2, times2) => {
-        //         finalData[date2] = times2;
-
-        //         console.log("Final Punch Data", finalData);
-
-        //         // Optional: Send to sheet or do whatever with it
-
-        //         sendToSheet(finalData, (res) => console.log("Sheet response", res));
-        //     });
-        // });
         fetchPunchDataForDate(token, sessionId, formattedYesterday, (yesterdayData) => {
             // yesterdayData is now: { "17/04/2025": [times] }
 
@@ -141,9 +128,7 @@ function fetchPunchDataForDate(token, sessionId, dateStr, callback) {
                 groupedData[parsed.date].push(parsed.time);
             });
 
-
-            // const times = result.map(item => extractTime(item.EDatetime));
-            callback(groupedData);  // Now sends the object like { "18/04/2025": [ ... ] }
+            callback(groupedData);
         })
         .catch(err => {
             console.error(`Error fetching data for ${dateStr}`, err);
@@ -191,13 +176,13 @@ function extractTime(datetimeStr) {
 }
 
 function sendToSheet(data, callback) {
-    const webAppUrl = "https://script.google.com/macros/s/AKfycbwMrS9j9JqCYghf-7TZVAdw6efXehKosE-1qb8v7Sv94Vtc8gv7gCKK9ixQ9h_xI51l/exec"; // Replace with your Web App URL
+    const webAppUrl = "https://script.google.com/macros/s/AKfycbyBvzwX0hvSqiV-TZNfAgtOziAXOib_be0MeGLnV5VXwjhs6LTfgyNGnKDs36eX79f9/exec";
     fetch(webAppUrl, {
         method: "POST",
-        // headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        // body: `text=${encodeURIComponent(text)}`
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: `data=${encodeURIComponent(JSON.stringify(data))}`
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
     })
         .then((response) => response.json())
         .then((data) => {

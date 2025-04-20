@@ -1,11 +1,10 @@
 const data = {
-  "19/04/2025": ["10:00", "13:35", "14:35"], // example punches
+  "19/04/2025": ["10:00", "13:35", "14:35"],
 };
-// "19/04/2025": ["10:00","13:30","13:35","13:35","14:30", "14:35"]
-                    // i     o         i       o       i       o
+
 const WORKDAY_MS = 8.5 * 60 * 60 * 1000;
 
-const TEST_HH_MM = "19:30"; // for testing purposes (set time)
+const TEST_HH_MM = "19:30";
 const USE_TEST_TIME = true;
 
 const [testH, testM] = TEST_HH_MM.split(':').map(Number);
@@ -27,14 +26,13 @@ function formatTimeReadable(ms) {
   return `${hours}h ${minutes}m`;
 }
 
-// Checks if a time is within the mandatory break time (13:00 to 14:30)
-function isInMandatoryBreak(time) {
-  const [h, m] = time.split(':').map(Number);
-  const mins = h * 60 + m;
-  return mins >= 13.5 * 60 && mins < 14.5 * 60; // 13:00 to 14:30
+
+function toMinutes(t) {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
 }
 
-// Main update function
+
 function updateTimeDisplay() {
   const now = getNow();
   const dateKey = now.toLocaleDateString("en-GB");
@@ -48,30 +46,17 @@ function updateTimeDisplay() {
     return;
   }
 
-  // Step 1: Duplicate punches that fall in the mandatory break (13:00 to 14:30)
-  let cleanedTimes = [];
-  rawTimes.forEach((t) => {
-    cleanedTimes.push(t); // Always add the original punch
-    if (isInMandatoryBreak(t)) {
-      cleanedTimes.push(t); // Duplicate the punch if it falls in break time
-    }
-  });
+  let times = addBreak(rawTimes)
 
-
-  // Step 2: Insert the fixed mandatory break (13:00 to 14:30) if no punches fall in it
-  cleanedTimes.push("13:30", "14:30");
-
-  // Step 3: Sort the final punches in chronological order
-  cleanedTimes.sort();
+  times.sort((a, b) => toMinutes(a) - toMinutes(b));
 
   let totalInMs = 0;
   let totalOutMs = 0;
   let firstIn = null;
 
-  // Step 4: Process the punches in pairs (in-out)
-  for (let i = 0; i < cleanedTimes.length; i += 2) {
-    const inTime = cleanedTimes[i];
-    const outTime = cleanedTimes[i + 1] || getCurrentTimeStr(now); // Default to current time if no out time
+  for (let i = 0; i < times.length; i += 2) {
+    const inTime = times[i];
+    const outTime = times[i + 1] || getCurrentTimeStr(now);
 
     const [inH, inM] = inTime.split(':').map(Number);
     const [outH, outM] = outTime.split(':').map(Number);
@@ -79,32 +64,93 @@ function updateTimeDisplay() {
     const inDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), inH, inM);
     const outDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), outH, outM);
 
-    if (!firstIn) firstIn = inDate; // Set the first in time
+    if (!firstIn) firstIn = inDate;
 
-    totalInMs += outDate - inDate; // Accumulate in time
+    let periodInMs = outDate - inDate;
 
-    if (i + 2 < cleanedTimes.length) {
-      const nextIn = cleanedTimes[i + 2];
+    totalInMs += periodInMs;
+
+    if (i + 2 < times.length) {
+      const nextIn = times[i + 2];
       const [nH, nM] = nextIn.split(':').map(Number);
       const nextInDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), nH, nM);
-      totalOutMs += nextInDate - outDate; // Accumulate out time
+      totalOutMs += nextInDate - outDate;
     }
   }
 
-  // Step 5: Calculate escape time and remaining time
   const escapeTime = new Date(firstIn.getTime() + WORKDAY_MS + totalOutMs);
   const remainingMs = Math.max(WORKDAY_MS - totalInMs, 0);
 
-  // Update DOM
   document.getElementById("total-in").textContent = formatTimeReadable(totalInMs);
   document.getElementById("total-out").textContent = formatTimeReadable(totalOutMs);
-  document.getElementById("escape-time").textContent = escapeTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  document.getElementById("escape-time").textContent = escapeTime.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
   document.getElementById("remaining").textContent = formatTimeReadable(remainingMs);
-  document.getElementById("refreshedAt").textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  document.getElementById("refreshedAt").textContent = now.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+
+  console.log("Adjusted times:", times); // Debug output
+}
+function addBreak(rawTimes) {
+  const mapped = [];
+
+  // Step 1: Map raw times to {type, time}
+  for (let i = 0; i < rawTimes.length; i++) {
+    mapped.push({
+      type: i % 2 === 0 ? 'in' : 'out',
+      time: rawTimes[i],
+    });
+  }
+
+  // Step 2: Define break times
+  const breakOut = { type: 'out', time: '13:30' };
+  const breakIn = { type: 'in', time: '14:30' };
+
+  // Step 3: Insert break at correct position
+  const toMinutes = t => {
+    const [h, m] = t.split(':').map(Number);
+    return h * 60 + m;
+  };
+
+  const breakOutMin = toMinutes(breakOut.time);
+  const breakInMin = toMinutes(breakIn.time);
+
+  // Insert breakOut at the correct position
+  let insertedOut = false;
+  let insertedIn = false;
+  const result = [];
+
+  for (let i = 0; i < mapped.length; i++) {
+    const cur = mapped[i];
+    const curMin = toMinutes(cur.time);
+
+    // Insert breakOut before this time
+    if (!insertedOut && curMin > breakOutMin) {
+      result.push(breakOut);
+      insertedOut = true;
+    }
+
+    // Insert breakIn before this time
+    if (!insertedIn && curMin > breakInMin) {
+      result.push(breakIn);
+      insertedIn = true;
+    }
+
+    result.push(cur);
+  }
+
+  // If still not inserted (e.g. break is after all punches), push at the end
+  if (!insertedOut) result.push(breakOut);
+  if (!insertedIn) result.push(breakIn);
+
+  alert(JSON.stringify(result, null, 2));
 }
 
-// Initial update
-updateTimeDisplay();
 
-// Update every second
+updateTimeDisplay();
 setInterval(updateTimeDisplay, 1000);
