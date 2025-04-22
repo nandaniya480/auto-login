@@ -92,6 +92,15 @@ function addBreak(times) {
     const breakStartMin = toMinutes("13:31");
     const breakEndMin = toMinutes("14:29");
 
+    // Check current time
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    // Only add break if current time is after 13:30
+    if (currentMinutes <= breakStartMin) {
+        return times;
+    }
+
     const punches = times.map((t, i) => ({ type: i % 2 === 0 ? 'in' : 'out', time: t }));
     const statusAtBreakStart = getStatusAtTime(punches, breakStartMin);
     const statusAtBreakEnd = getStatusAtTime(punches, breakEndMin);

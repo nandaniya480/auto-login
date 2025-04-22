@@ -46,7 +46,8 @@ function updateTimeDisplay() {
       return;
     }
 
-    const times = addBreak(rawTimes);
+    // const times = addBreak(rawTimes);
+    const times = rawTimes;
 
     let totalInMs = 0;
     let totalOutMs = 0;
