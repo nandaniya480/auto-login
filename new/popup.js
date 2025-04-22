@@ -46,7 +46,8 @@ function updateTimeDisplay() {
       return;
     }
 
-    const times = addBreak(rawTimes);
+    // const times = addBreak(rawTimes);
+    const times = rawTimes;
 
     let totalInMs = 0;
     let totalOutMs = 0;
@@ -97,49 +98,6 @@ function updateUI(totalIn, totalOut, escapeTime, remaining, now) {
     hour12: true
   });
   document.getElementById("remaining").textContent = remaining;
-}
-
-// Break Logic
-function addBreak(rawTimes) {
-  const breakStart = "13:30";
-  const breakEnd = "14:30";
-  const breakStartMin = toMinutes("13:31");
-  const breakEndMin = toMinutes("14:29");
-
-  const punches = rawTimes.map((t, i) => ({
-    type: i % 2 === 0 ? 'in' : 'out',
-    time: t
-  }));
-
-  const statusAtBreakStart = getStatusAtTime(punches, breakStartMin);
-  const statusAtBreakEnd = getStatusAtTime(punches, breakEndMin);
-
-  const filtered = punches.filter(p => {
-    const timeMin = toMinutes(p.time);
-    return timeMin < breakStartMin || timeMin > breakEndMin;
-  });
-
-  if (statusAtBreakStart === 'in' && statusAtBreakEnd === 'in') {
-    filtered.push({ type: 'out', time: breakStart });
-    filtered.push({ type: 'in', time: breakEnd });
-  } else if (statusAtBreakStart === 'in' && statusAtBreakEnd === 'out') {
-    filtered.push({ type: 'out', time: breakStart });
-  } else if (statusAtBreakStart === 'out' && statusAtBreakEnd === 'in') {
-    filtered.push({ type: 'in', time: breakEnd });
-  }
-
-  filtered.sort((a, b) => toMinutes(a.time) - toMinutes(b.time));
-  return filtered.map(p => p.time);
-}
-
-function getStatusAtTime(punches, targetMin) {
-  let status = 'out';
-  for (const punch of punches) {
-    const timeMin = toMinutes(punch.time);
-    if (timeMin > targetMin) break;
-    status = status === 'in' ? 'out' : 'in';
-  }
-  return status;
 }
 
 // Start Auto Update

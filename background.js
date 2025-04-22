@@ -89,21 +89,21 @@ function fetchPunchDataForDate(token, sessionId, dateStr, callback) {
 function addBreak(times) {
     const breakStart = "13:30";
     const breakEnd = "14:30";
-    const breakStartMin = toMinutes("13:31");
-    const breakEndMin = toMinutes("14:29");
+    const breakStartMin = toMinutes(breakStart);
+    const breakEndMin = toMinutes(breakEnd);
 
     // Check current time
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
     // Only add break if current time is after 13:30
-    if (currentMinutes <= breakStartMin) {
+    if (currentMinutes < breakStartMin) {
         return times;
     }
 
     const punches = times.map((t, i) => ({ type: i % 2 === 0 ? 'in' : 'out', time: t }));
-    const statusAtBreakStart = getStatusAtTime(punches, breakStartMin);
-    const statusAtBreakEnd = getStatusAtTime(punches, breakEndMin);
+    const statusAtBreakStart = getStatusAtTime(punches, breakStartMin - 1);
+    const statusAtBreakEnd = getStatusAtTime(punches, breakEndMin + 1);
 
     const filtered = punches.filter(p => {
         const timeMin = toMinutes(p.time);
