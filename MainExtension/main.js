@@ -95,31 +95,26 @@ function startTracking() {
         document.getElementById("remaining").textContent = remaining;
     }
 
-    function addBreak(rawTimes) {
+    function addBreak(times) {
         const breakStart = "13:30";
         const breakEnd = "14:30";
-        const breakStartMin = toMinutes("13:31");
-        const breakEndMin = toMinutes("14:29");
+        const breakStartMin = toMinutes(breakStart);
+        const breakEndMin = toMinutes(breakEnd);
 
-        const punches = rawTimes.map((t, i) => ({
-            type: i % 2 === 0 ? 'in' : 'out',
-            time: t
-        }));
-
+        const punches = times.map((t, i) => ({ type: i % 2 === 0 ? 'in' : 'out', time: t }));
         const statusAtBreakStart = getStatusAtTime(punches, breakStartMin);
-        const statusAtBreakEnd = getStatusAtTime(punches, breakEndMin);
+        const statusAtBreakEnd = getStatusAtTime(punches, breakEndMin - 1);
 
         const filtered = punches.filter(p => {
             const timeMin = toMinutes(p.time);
-            return timeMin < breakStartMin || timeMin > breakEndMin;
+            return timeMin < breakStartMin || timeMin >= breakEndMin;
         });
 
         if (statusAtBreakStart === 'in' && statusAtBreakEnd === 'in') {
+            filtered.push({ type: 'out', time: breakStart }, { type: 'in', time: breakEnd });
+        } else if (statusAtBreakStart === 'in') {
             filtered.push({ type: 'out', time: breakStart });
-            filtered.push({ type: 'in', time: breakEnd });
-        } else if (statusAtBreakStart === 'in' && statusAtBreakEnd === 'out') {
-            filtered.push({ type: 'out', time: breakStart });
-        } else if (statusAtBreakStart === 'out' && statusAtBreakEnd === 'in') {
+        } else if (statusAtBreakEnd === 'in') {
             filtered.push({ type: 'in', time: breakEnd });
         }
 
