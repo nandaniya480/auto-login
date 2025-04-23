@@ -74,7 +74,7 @@ function fetchPunchDataForDate(token, sessionId, dateStr, callback) {
 
             const final = {};
             Object.keys(groupedData).forEach(date => {
-                const withBreaks = addBreak(groupedData[date]);
+                const withBreaks = addBreak(groupedData[date], date);
                 final[date] = withBreaks;
             });
             callback(final);
@@ -85,18 +85,21 @@ function fetchPunchDataForDate(token, sessionId, dateStr, callback) {
         });
 }
 
-function addBreak(times) {
+function addBreak(times, date) {
     const breakStart = "13:30";
     const breakEnd = "14:30";
     const breakStartMin = toMinutes(breakStart);
     const breakEndMin = toMinutes(breakEnd);
+
+    const today = new Date();
+    const formattedToday = formatDate(today);
 
     // Check current time
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
     // Only add break if current time is after 13:30
-    if (currentMinutes < breakStartMin) {
+    if (currentMinutes < breakStartMin && formattedToday === date) {
         return times;
     }
 
