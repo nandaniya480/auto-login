@@ -90,6 +90,7 @@ function addBreak(times) {
     const breakEnd = "14:30";
     const breakStartMin = toMinutes(breakStart);
     const breakEndMin = toMinutes(breakEnd);
+<<<<<<<< HEAD:MainExtension/background.js
 
     // Check current time
     const now = new Date();
@@ -103,6 +104,12 @@ function addBreak(times) {
     const punches = times.map((t, i) => ({ type: i % 2 === 0 ? 'in' : 'out', time: t }));
     const statusAtBreakStart = getStatusAtTime(punches, breakStartMin - 1);
     const statusAtBreakEnd = getStatusAtTime(punches, breakEndMin + 1);
+========
+
+    const punches = times.map((t, i) => ({ type: i % 2 === 0 ? 'in' : 'out', time: t }));
+    const statusAtBreakStart = getStatusAtTime(punches, breakStartMin);
+    const statusAtBreakEnd = getStatusAtTime(punches, breakEndMin - 1);
+>>>>>>>> 49caf631d22aaaf30867c2cdba64e861ea5a48ad:MainExtension_old/background.js
 
     const filtered = punches.filter(p => {
         const timeMin = toMinutes(p.time);
