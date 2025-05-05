@@ -69,7 +69,18 @@ function updateTimeDisplay() {
       }
     }
 
-    const escapeTime = new Date(firstIn.getTime() + WORKDAY_MS + totalOutMs);
+
+    const targetHour = 13;
+    const targetMinute = 30;
+    const ONE_HOUR_MS = 60 * 60 * 1000;
+    
+    let escapeTime;
+    if (now.getHours() < targetHour || (now.getHours() === targetHour && now.getMinutes() < targetMinute)) {
+      escapeTime = new Date(firstIn.getTime() + WORKDAY_MS + totalOutMs + ONE_HOUR_MS);
+    } else {
+      escapeTime = new Date(firstIn.getTime() + WORKDAY_MS + totalOutMs);
+    }
+
     const remainingMs = Math.max(WORKDAY_MS - totalInMs, 0);
 
     updateUI(
