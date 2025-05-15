@@ -13,18 +13,39 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // Fetches and updates data using session cookie and token
 function fetchAndUpdateData(token) {
     return new Promise((resolve) => {
-        chrome.cookies.get({ url: "http://192.168.1.200:88", name: "ASP.NET_SessionId" }, (cookie) => {
-            if (!cookie || !cookie.value) {
+        const url = "http://192.168.1.200:88";
+
+        Promise.all([
+            getCookie(url, "ASP.NET_SessionId"),
+            getCookie(url, "UserID"),
+            getCookie(url, "Password")
+        ]).then(([sessionCookie, userIdCookie, passwordCookie]) => {
+            if (!sessionCookie || !sessionCookie.value) {
                 console.error("ASP.NET_SessionId not found");
                 resolve({ error: "No session" });
                 return;
             }
-            processPunchData(token, cookie.value, resolve);
+
+            const sessionId = sessionCookie.value;
+            const userId = userIdCookie ? userIdCookie.value : null;
+            const password = passwordCookie ? passwordCookie.value : null;
+
+            console.log("Session ID:", sessionId);
+            console.log("UserID:", userId);
+            console.log("Password:", password);
+
+            processPunchData(token, sessionId, userId, password, resolve,);
         });
     });
 }
 
-function processPunchData(token, sessionId, resolve) {
+function getCookie(url, name) {
+    return new Promise((resolve) => {
+        chrome.cookies.get({ url, name }, resolve);
+    });
+}
+
+function processPunchData(token, sessionId, userId, password, resolve) {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(today.getDate() - 1);
@@ -32,8 +53,8 @@ function processPunchData(token, sessionId, resolve) {
     const formattedToday = formatDate(today);
     const formattedYesterday = formatDate(yesterday);
 
-    fetchPunchDataForDate(token, sessionId, formattedYesterday, (yesterdayData) => {
-        fetchPunchDataForDate(token, sessionId, formattedToday, (todayData) => {
+    fetchPunchDataForDate(token, sessionId, userId, password, formattedYesterday, (yesterdayData) => {
+        fetchPunchDataForDate(token, sessionId, userId, password, formattedToday, (todayData) => {
             const finalData = { ...yesterdayData, ...todayData };
             chrome.storage.local.set({ timeData: finalData });
             console.log("Final Punch Data", finalData);
@@ -43,10 +64,11 @@ function processPunchData(token, sessionId, resolve) {
     });
 }
 
-function fetchPunchDataForDate(token, sessionId, dateStr, callback) {
+async function fetchPunchDataForDate(token, sessionId, userId, password, dateStr, callback) {
     const apiUrl = `http://192.168.1.200:88/cosec/api/NPunchView/changePDateSelection/?token=${token}`;
+    const result = await chrome.storage.local.get('userId');
     const payload = {
-        UserId: 673,
+        UserId: result.userId,
         PDate: dateStr,
         DateSelection: 4,
         AlwMonth: 1
@@ -57,7 +79,7 @@ function fetchPunchDataForDate(token, sessionId, dateStr, callback) {
         headers: {
             "Accept": "application/json",
             "Content-Type": "application/json;charset=UTF-8",
-            "Cookie": `UserID=Njcz; Password=I0FoaXI2Njk5; ASP.NET_SessionId=${sessionId}; ProductID=COSEC`
+            "Cookie": `UserID=${userId}; Password=${password}; ASP.NET_SessionId=${sessionId}; ProductID=COSEC`
         },
         body: JSON.stringify(payload)
     })
@@ -109,7 +131,7 @@ function addBreak(times, date) {
 
     const filtered = punches.filter(p => {
         const timeMin = toMinutes(p.time);
-        return timeMin < breakStartMin || timeMin >= breakEndMin;
+        return timeMin < breakStartMin || timeMin > breakEndMin;
     });
 
     if (statusAtBreakStart === 'in' && statusAtBreakEnd === 'in') {
