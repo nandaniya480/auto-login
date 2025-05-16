@@ -3,7 +3,6 @@ function fetchApiData() {
     setTimeout(() => {
         const quickLinksLabel = document.querySelector('label[ng-click="pgObj.tabClick(\'2\')"]');
         if (quickLinksLabel) {
-            console.log("✅ Clicking Quick Links tab...");
             quickLinksLabel.click();
 
             setTimeout(() => {
@@ -11,53 +10,51 @@ function fetchApiData() {
                     .find(div => div.innerText.includes("N-Punch View"));
 
                 if (nPunchLink) {
-                    console.log("✅ Clicking N-Punch View...");
                     nPunchLink.click();
 
                     setTimeout(() => {
-                        console.log("⏳ Looking for table...");
-                        const tables = document.querySelectorAll("table");
+                        // console.log("⏳ Looking for table...");
+                        // const tables = document.querySelectorAll("table");
 
-                        let foundTimeValues = [];
+                        // let foundTimeValues = [];
 
-                        tables.forEach((table) => {
-                            const headers = Array.from(table.querySelectorAll("th"));
-                            const timeIndex = headers.findIndex(th =>
-                                th.innerText.trim().toLowerCase() === "time"
-                            );
+                        // tables.forEach((table) => {
+                        //     const headers = Array.from(table.querySelectorAll("th"));
+                        //     const timeIndex = headers.findIndex(th =>
+                        //         th.innerText.trim().toLowerCase() === "time"
+                        //     );
 
-                            if (timeIndex !== -1) {
-                                const rows = table.querySelectorAll("tbody tr");
-                                rows.forEach(row => {
-                                    const cells = row.querySelectorAll("td");
-                                    if (cells[timeIndex]) {
-                                        const timeValue = cells[timeIndex].innerText.trim();
-                                        if (timeValue) {
-                                            foundTimeValues.push(timeValue);
-                                        }
-                                    }
-                                });
-                            }
-                        });
-                        if (foundTimeValues.length) {
-                            const timeData = foundTimeValues.join("\n");
-                            const token = localStorage.getItem("SecurityManager.token");
-                            if (token) {
-                                chrome.runtime.sendMessage({
-                                    action: "getSessionIdAndCallAPI",
-                                    token: token,
-                                });
-                            }
-                        } else {
-                            console.warn("⚠️ No time values found.");
+                        //     if (timeIndex !== -1) {
+                        //         const rows = table.querySelectorAll("tbody tr");
+                        //         rows.forEach(row => {
+                        //             const cells = row.querySelectorAll("td");
+                        //             if (cells[timeIndex]) {
+                        //                 const timeValue = cells[timeIndex].innerText.trim();
+                        //                 if (timeValue) {
+                        //                     foundTimeValues.push(timeValue);
+                        //                 }
+                        //             }
+                        //         });
+                        //     }
+                        // });
+                        // if (foundTimeValues.length) {
+                        const token = localStorage.getItem("SecurityManager.token");
+                        if (token) {
+                            chrome.runtime.sendMessage({
+                                action: "getSessionIdAndCallAPI",
+                                token: token,
+                            });
                         }
-                    }, 5000);
+                        // } else {
+                        //     console.warn("⚠️ No time values found.");
+                        // }
+                    }, 500);
                 } else {
                     console.warn("⚠️ N-Punch View not found.");
                 }
-            }, 3000);
+            }, 1000);
         } else {
             console.warn("⚠️ Quick Links tab not found.");
         }
-    }, 10000);
+    }, 5000);
 }

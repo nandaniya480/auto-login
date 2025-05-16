@@ -6,11 +6,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const targetUrl = "http://192.168.1.200:88";
 
         // Create a new tab in background
+        chrome.storage.local.set({ generated: "yes" });
         chrome.tabs.create({
             url: targetUrl + "/COSEC/Login/Login",
             active: false
         }, (tab) => {
-            // Wait for the page to load before injecting the script
             chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
                 if (tabId === tab.id && info.status === 'complete') {
                     chrome.tabs.onUpdated.removeListener(listener);
@@ -65,26 +65,30 @@ function getCookie(url, name) {
     });
 }
 
-function processPunchData(token, sessionId, userId, password, resolve) {
+async function processPunchData(token, sessionId, userId, password, resolve) {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(today.getDate() - 1);
 
     const formattedToday = formatDate(today);
     const formattedYesterday = formatDate(yesterday);
+    const generated = await chrome.storage.local.get('generated');
 
-    fetchPunchDataForDate(token, sessionId, userId, password, formattedYesterday, (yesterdayData) => {
+
+    fetchPunchDataForDate(token, sessionId, userId, password, formattedYesterday, async (yesterdayData) => {
         fetchPunchDataForDate(token, sessionId, userId, password, formattedToday, (todayData) => {
             const finalData = { ...yesterdayData, ...todayData };
             chrome.storage.local.set({ timeData: finalData });
 
-            // Close the COSEC tab
-            chrome.tabs.query({ url: "http://192.168.1.200:88/COSEC/Default/Default*" }, (tabs) => {
-                if (tabs.length > 0) {
-                    chrome.tabs.remove(tabs[0].id);
-                }
-            });
-
+            // Close the generated COSEC tab
+            if (generated.generated == "yes") {
+                chrome.storage.local.remove('generated');
+                chrome.tabs.query({ url: "http://192.168.1.200:88/COSEC/Default/Default*" }, (tabs) => {
+                    if (tabs.length > 0) {
+                        chrome.tabs.remove(tabs[0].id);
+                    }
+                });
+            }
             resolve(finalData);
         });
     });
