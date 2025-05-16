@@ -1,12 +1,37 @@
 // Listener for refreshing data
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === "refreshData") {
-        fetchAndUpdateData(request.token).then(sendResponse);
-        return true;
-    }
-
     if (request.action === "getSessionIdAndCallAPI") {
         fetchAndUpdateData(request.token);
+    } else if (request.action === "openAndScrape") {
+        const targetUrl = "http://192.168.1.200:88";
+
+        // Create a new tab in background
+        chrome.tabs.create({
+            url: targetUrl + "/COSEC/Login/Login",
+            active: false
+        }, (tab) => {
+            // Wait for the page to load before injecting the script
+            chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
+                if (tabId === tab.id && info.status === 'complete') {
+                    chrome.tabs.onUpdated.removeListener(listener);
+                    chrome.scripting.executeScript({
+                        target: { tabId: tab.id },
+                        function: (userId, password) => {
+                            const userField = document.getElementById('loginid');
+                            const passField = document.getElementById('pwd');
+                            const loginButton = document.getElementById('btnlogin');
+
+                            if (userField && passField && loginButton) {
+                                userField.value = userId;
+                                passField.value = password;
+                                loginButton.click();
+                            }
+                        },
+                        args: [request.userId, request.password],
+                    });
+                }
+            });
+        });
     }
 });
 
@@ -58,6 +83,14 @@ function processPunchData(token, sessionId, userId, password, resolve) {
             const finalData = { ...yesterdayData, ...todayData };
             chrome.storage.local.set({ timeData: finalData });
             console.log("Final Punch Data", finalData);
+
+            // Close the COSEC tab
+            chrome.tabs.query({ url: "http://192.168.1.200:88/COSEC/Default/Default*" }, (tabs) => {
+                if (tabs.length > 0) {
+                    chrome.tabs.remove(tabs[0].id);
+                }
+            });
+
             sendToSheet(finalData, (res) => console.log("Sheet response", res));
             resolve(finalData);
         });
@@ -126,8 +159,8 @@ function addBreak(times, date) {
     }
 
     const punches = times.map((t, i) => ({ type: i % 2 === 0 ? 'in' : 'out', time: t }));
-    const statusAtBreakStart = getStatusAtTime(punches, breakStartMin - 1);
-    const statusAtBreakEnd = getStatusAtTime(punches, breakEndMin + 1);
+    const statusAtBreakStart = getStatusAtTime(punches, breakStartMin - 0.5);
+    const statusAtBreakEnd = getStatusAtTime(punches, breakEndMin + 0.5);
 
     const filtered = punches.filter(p => {
         const timeMin = toMinutes(p.time);

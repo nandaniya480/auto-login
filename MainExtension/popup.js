@@ -3,6 +3,86 @@ const WORKDAY_MS = 8.5 * 60 * 60 * 1000;
 const TEST_HH_MM = "19:55";
 const USE_TEST_TIME = false;
 
+// DOM Elements
+const loginForm = document.getElementById('loginForm');
+const timeDisplay = document.getElementById('timeDisplay');
+const userIdInput = document.getElementById('userIdInput');
+const passwordInput = document.getElementById('passwordInput');
+const saveCredsButton = document.getElementById('saveCreds');
+const refreshButton = document.getElementById('refreshButton');
+
+// Function to trigger login process
+function triggerLogin(userId, password) {
+  chrome.runtime.sendMessage({
+    action: "openAndScrape",
+    userId: userId,
+    password: password
+  });
+}
+
+// Check if credentials exist on popup open
+chrome.storage.local.get(['userId', 'password','timeData'], (result) => {
+  if (result.userId && result.password) {
+    // Credentials exist, show time display
+    loginForm.style.display = 'none';
+    timeDisplay.style.display = 'block';
+
+  } else {
+    // No credentials, show login form
+    loginForm.style.display = 'block';
+    timeDisplay.style.display = 'none';
+  }
+});
+
+// Save credentials and trigger login
+saveCredsButton.addEventListener('click', () => {
+  const userId = userIdInput.value.trim();
+  const password = passwordInput.value.trim();
+
+  if (userId && password) {
+    chrome.storage.local.set({ userId, password }, () => {
+      // Show success message
+      saveCredsButton.textContent = 'Saved!';
+      saveCredsButton.style.backgroundColor = '#27ae60';
+
+      // Trigger login process
+      triggerLogin(userId, password);
+
+      // Switch to time display after a short delay
+      setTimeout(() => {
+        loginForm.style.display = 'none';
+        timeDisplay.style.display = 'block';
+        updateTimeDisplay();
+        refreshButton.textContent = 'Loading...';
+        refreshButton.disabled = true;
+        refreshButton.style.backgroundColor = '#95a5a6';
+      }, 1000);
+    });
+  } else {
+    saveCredsButton.textContent = 'Please fill both fields';
+    saveCredsButton.style.backgroundColor = '#e74c3c';
+    setTimeout(() => {
+      saveCredsButton.textContent = 'Save & Login';
+      saveCredsButton.style.backgroundColor = '#2ecc71';
+    }, 2000);
+  }
+});
+
+// Add refresh button event listener
+refreshButton.addEventListener('click', () => {
+  // Clear existing timeData
+  chrome.storage.local.remove(['timeData'], () => {
+    // Get stored credentials and trigger login
+    chrome.storage.local.get(['userId', 'password'], (result) => {
+      if (result.userId && result.password) {
+        triggerLogin(result.userId, result.password);
+        // Update the display
+        updateTimeDisplay();
+      }    
+    });
+  });
+});
+
 // Helpers
 const [testH, testM] = TEST_HH_MM.split(':').map(Number);
 const today = new Date();
@@ -41,6 +121,10 @@ function updateTimeDisplay() {
     const dateKey = now.toLocaleDateString("en-GB");
     const rawTimes = data[dateKey];
 
+    refreshButton.textContent = 'Loading...';
+    refreshButton.disabled = true;
+    refreshButton.style.backgroundColor = '#95a5a6';
+
     if (!rawTimes || rawTimes.length === 0) {
       updateUI("N/A", "N/A", "N/A", "N/A", now);
       return;
@@ -73,7 +157,7 @@ function updateTimeDisplay() {
     const targetHour = 13;
     const targetMinute = 30;
     const ONE_HOUR_MS = 60 * 60 * 1000;
-    
+
     let escapeTime;
     if (now.getHours() < targetHour || (now.getHours() === targetHour && now.getMinutes() < targetMinute)) {
       escapeTime = new Date(firstIn.getTime() + WORKDAY_MS + totalOutMs + ONE_HOUR_MS);
@@ -90,6 +174,11 @@ function updateTimeDisplay() {
       formatTimeReadable(remainingMs),
       now
     );
+
+    refreshButton.textContent = 'Refresh';
+    refreshButton.disabled = false;
+    refreshButton.style.backgroundColor = '#2ecc71';
+
   });
 }
 
