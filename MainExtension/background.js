@@ -56,10 +56,6 @@ function fetchAndUpdateData(token) {
             const userId = userIdCookie ? userIdCookie.value : null;
             const password = passwordCookie ? passwordCookie.value : null;
 
-            console.log("Session ID:", sessionId);
-            console.log("UserID:", userId);
-            console.log("Password:", password);
-
             processPunchData(token, sessionId, userId, password, resolve,);
         });
     });
