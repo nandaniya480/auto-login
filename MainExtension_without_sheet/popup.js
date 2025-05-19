@@ -10,8 +10,9 @@ const userIdInput = document.getElementById('userIdInput');
 const passwordInput = document.getElementById('passwordInput');
 const saveCredsButton = document.getElementById('saveCreds');
 const refreshButton = document.getElementById('refreshButton');
+const today = new Date();
 
-// Function to trigger login process
+// Trigger login and data scrape
 function triggerLogin(userId, password) {
   chrome.runtime.sendMessage({
     action: "openAndScrape",
@@ -20,35 +21,29 @@ function triggerLogin(userId, password) {
   });
 }
 
-// Check if credentials exist on popup open
-chrome.storage.local.get(['userId', 'password','timeData'], (result) => {
+// On popup load — check saved credentials
+chrome.storage.local.get(['userId', 'password', 'timeData'], (result) => {
   if (result.userId && result.password) {
-    // Credentials exist, show time display
     loginForm.style.display = 'none';
     timeDisplay.style.display = 'block';
-
   } else {
-    // No credentials, show login form
     loginForm.style.display = 'block';
     timeDisplay.style.display = 'none';
   }
 });
 
-// Save credentials and trigger login
+// Save credentials and initiate login
 saveCredsButton.addEventListener('click', () => {
   const userId = userIdInput.value.trim();
   const password = passwordInput.value.trim();
 
   if (userId && password) {
     chrome.storage.local.set({ userId, password }, () => {
-      // Show success message
       saveCredsButton.textContent = 'Saved!';
       saveCredsButton.style.backgroundColor = '#27ae60';
 
-      // Trigger login process
       triggerLogin(userId, password);
 
-      // Switch to time display after a short delay
       setTimeout(() => {
         loginForm.style.display = 'none';
         timeDisplay.style.display = 'block';
@@ -68,26 +63,30 @@ saveCredsButton.addEventListener('click', () => {
   }
 });
 
-// Add refresh button event listener
+// Refresh today's data and re-trigger login
 refreshButton.addEventListener('click', () => {
-  // Clear existing timeData
-  chrome.storage.local.remove(['timeData'], () => {
-    // Get stored credentials and trigger login
-    chrome.storage.local.get(['userId', 'password'], (result) => {
+  chrome.storage.local.get(['timeData', 'userId', 'password'], (result) => {
+    const timeData = result.timeData || {};
+    const todayDate = today.toLocaleDateString();
+
+    if (timeData[todayDate]) {
+      delete timeData[todayDate];
+    }
+
+    chrome.storage.local.set({ timeData }, () => {
       if (result.userId && result.password) {
         triggerLogin(result.userId, result.password);
-        // Update the display
         updateTimeDisplay();
-      }    
+      }
     });
   });
 });
 
-// Helpers
+// Test time logic
 const [testH, testM] = TEST_HH_MM.split(':').map(Number);
-const today = new Date();
 const TEST_TIME = new Date(today.getFullYear(), today.getMonth(), today.getDate(), testH, testM);
 
+// Time helper functions
 function getNow() {
   return USE_TEST_TIME ? new Date(TEST_TIME) : new Date();
 }
@@ -113,7 +112,7 @@ function createTimeObj(timeStr, refDate) {
   return new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate(), h, m);
 }
 
-// Main Display Update
+// Main function to update UI with time data
 function updateTimeDisplay() {
   chrome.storage.local.get(null, (result) => {
     const data = result.timeData || {};
@@ -130,9 +129,7 @@ function updateTimeDisplay() {
       return;
     }
 
-    // const times = addBreak(rawTimes);
     const times = rawTimes;
-
     let totalInMs = 0;
     let totalOutMs = 0;
     let firstIn = null;
@@ -153,7 +150,7 @@ function updateTimeDisplay() {
       }
     }
 
-
+    // Escape time logic
     const targetHour = 13;
     const targetMinute = 30;
     const ONE_HOUR_MS = 60 * 60 * 1000;
@@ -178,11 +175,10 @@ function updateTimeDisplay() {
     refreshButton.textContent = 'Refresh';
     refreshButton.disabled = false;
     refreshButton.style.backgroundColor = '#2ecc71';
-
   });
 }
 
-// UI Update
+// Update the HTML UI elements
 function updateUI(totalIn, totalOut, escapeTime, remaining, now) {
   document.getElementById("total-in").textContent = totalIn;
   document.getElementById("total-out").textContent = totalOut;
@@ -200,6 +196,6 @@ function updateUI(totalIn, totalOut, escapeTime, remaining, now) {
   document.getElementById("remaining").textContent = remaining;
 }
 
-// Start Auto Update
+// Start auto update every second
 updateTimeDisplay();
 setInterval(updateTimeDisplay, 1000);
