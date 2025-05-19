@@ -3,37 +3,42 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "getSessionIdAndCallAPI") {
         fetchAndUpdateData(request.token);
     } else if (request.action === "openAndScrape") {
-        const targetUrl = "http://192.168.1.200:88";
-
-        // Create a new tab in background
-        chrome.storage.local.set({ generated: "yes" });
-        chrome.tabs.create({
-            url: targetUrl + "/COSEC/Login/Login",
-            active: false
-        }, (tab) => {
-            chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
-                if (tabId === tab.id && info.status === 'complete') {
-                    chrome.tabs.onUpdated.removeListener(listener);
-                    chrome.scripting.executeScript({
-                        target: { tabId: tab.id },
-                        function: (userId, password) => {
-                            const userField = document.getElementById('loginid');
-                            const passField = document.getElementById('pwd');
-                            const loginButton = document.getElementById('btnlogin');
-
-                            if (userField && passField && loginButton) {
-                                userField.value = userId;
-                                passField.value = password;
-                                loginButton.click();
-                            }
-                        },
-                        args: [request.userId, request.password],
-                    });
-                }
-            });
-        });
+        handleLoginAndScrape(request);
     }
 });
+
+function handleLoginAndScrape(request) {
+    const targetUrl = "http://192.168.1.200:88";
+    chrome.storage.local.set({ generated: "yes" });
+
+    chrome.tabs.create({
+        url: `${targetUrl}/COSEC/Login/Login`,
+        active: false
+    }, (tab) => {
+        chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
+            if (tabId === tab.id && info.status === 'complete') {
+                chrome.tabs.onUpdated.removeListener(listener);
+                chrome.scripting.executeScript({
+                    target: { tabId: tab.id },
+                    function: loginToCosec,
+                    args: [request.userId, request.password],
+                });
+            }
+        });
+    });
+}
+
+function loginToCosec(userId, password) {
+    const userField = document.getElementById('loginid');
+    const passField = document.getElementById('pwd');
+    const loginButton = document.getElementById('btnlogin');
+
+    if (userField && passField && loginButton) {
+        userField.value = userId;
+        passField.value = password;
+        loginButton.click();
+    }
+}
 
 function fetchAndUpdateData(token) {
     return new Promise((resolve) => {
@@ -44,17 +49,13 @@ function fetchAndUpdateData(token) {
             getCookie(url, "UserID"),
             getCookie(url, "Password")
         ]).then(([sessionCookie, userIdCookie, passwordCookie]) => {
-            if (!sessionCookie || !sessionCookie.value) {
+            if (!sessionCookie?.value) {
                 console.error("ASP.NET_SessionId not found");
                 resolve({ error: "No session" });
                 return;
             }
 
-            const sessionId = sessionCookie.value;
-            const userId = userIdCookie ? userIdCookie.value : null;
-            const password = passwordCookie ? passwordCookie.value : null;
-
-            processPunchData(token, sessionId, userId, password, resolve,);
+            processPunchData(token, sessionCookie.value, userIdCookie?.value, passwordCookie?.value, resolve);
         });
     });
 }
@@ -70,35 +71,38 @@ async function processPunchData(token, sessionId, userId, password, resolve) {
     const yesterday = new Date(today);
     yesterday.setDate(today.getDate() - 1);
 
-    const formattedToday = formatDate(today);
-    const formattedYesterday = formatDate(yesterday);
-    const generated = await chrome.storage.local.get('generated');
+    const [formattedToday, formattedYesterday] = [today, yesterday].map(formatDate);
+    const { generated } = await chrome.storage.local.get('generated');
 
-
-    fetchPunchDataForDate(token, sessionId, userId, password, formattedYesterday, async (yesterdayData) => {
+    fetchPunchDataForDate(token, sessionId, userId, password, formattedYesterday, (yesterdayData) => {
         fetchPunchDataForDate(token, sessionId, userId, password, formattedToday, (todayData) => {
             const finalData = { ...yesterdayData, ...todayData };
             chrome.storage.local.set({ timeData: finalData });
+            console.log("Final Punch Data", finalData);
 
-            // Close the generated COSEC tab
-            if (generated.generated == "yes") {
+            if (generated === "yes") {
                 chrome.storage.local.remove('generated');
-                chrome.tabs.query({ url: "http://192.168.1.200:88/COSEC/Default/Default*" }, (tabs) => {
-                    if (tabs.length > 0) {
-                        chrome.tabs.remove(tabs[0].id);
-                    }
-                });
+                closeGeneratedTab();
             }
             resolve(finalData);
         });
     });
 }
 
+function closeGeneratedTab() {
+    chrome.tabs.query({ url: "http://192.168.1.200:88/COSEC/Default/Default*" }, (tabs) => {
+        if (tabs.length > 0) {
+            chrome.tabs.remove(tabs[0].id);
+        }
+    });
+}
+
 async function fetchPunchDataForDate(token, sessionId, userId, password, dateStr, callback) {
     const apiUrl = `http://192.168.1.200:88/cosec/api/NPunchView/changePDateSelection/?token=${token}`;
-    const result = await chrome.storage.local.get('userId');
+    const { userId: storedUserId } = await chrome.storage.local.get('userId');
+
     const payload = {
-        UserId: result.userId,
+        UserId: storedUserId,
         PDate: dateStr,
         DateSelection: 4,
         AlwMonth: 1
@@ -113,47 +117,42 @@ async function fetchPunchDataForDate(token, sessionId, userId, password, dateStr
         },
         body: JSON.stringify(payload)
     })
-        .then(res => res.json())
-        .then(data => {
-            const result = data?.result?.grdData || [];
-            const groupedData = {};
-            result.forEach(item => {
-                const parsed = extractDateAndTime(item.EDatetime);
-                if (!parsed) return;
-                if (!groupedData[parsed.date]) groupedData[parsed.date] = [];
-                groupedData[parsed.date].push(parsed.time);
-            });
+    .then(res => res.json())
+    .then(data => {
+        const result = data?.result?.grdData || [];
+        const groupedData = groupPunchData(result);
+        callback(groupedData);
+    })
+    .catch(err => {
+        console.error(`Error fetching data for ${dateStr}`, err);
+        callback({ [dateStr]: [] });
+    });
+}
 
-            const final = {};
-            Object.keys(groupedData).forEach(date => {
-                const withBreaks = addBreak(groupedData[date], date);
-                final[date] = withBreaks;
-            });
-            callback(final);
-        })
-        .catch(err => {
-            console.error(`Error fetching data for ${dateStr}`, err);
-            callback({ [dateStr]: [] });
-        });
+function groupPunchData(data) {
+    const grouped = {};
+
+    data.forEach(item => {
+        const parsed = extractDateAndTime(item.EDatetime);
+        if (!parsed) return;
+        grouped[parsed.date] = grouped[parsed.date] || [];
+        grouped[parsed.date].push(parsed.time);
+    });
+
+    const final = {};
+    for (const date in grouped) {
+        final[date] = addBreak(grouped[date], date);
+    }
+    return final;
 }
 
 function addBreak(times, date) {
-    const breakStart = "13:30";
-    const breakEnd = "14:30";
-    const breakStartMin = toMinutes(breakStart);
-    const breakEndMin = toMinutes(breakEnd);
+    const breakStartMin = toMinutes("13:30");
+    const breakEndMin = toMinutes("14:30");
+    const currentMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+    const isToday = formatDate(new Date()) === date;
 
-    const today = new Date();
-    const formattedToday = formatDate(today);
-
-    // Check current time
-    const now = new Date();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
-    // Only add break if current time is after 13:30
-    if (currentMinutes < breakStartMin && formattedToday === date) {
-        return times;
-    }
+    if (currentMinutes < breakStartMin && isToday) return times;
 
     const punches = times.map((t, i) => ({ type: i % 2 === 0 ? 'in' : 'out', time: t }));
     const statusAtBreakStart = getStatusAtTime(punches, breakStartMin - 0.5);
@@ -165,22 +164,20 @@ function addBreak(times, date) {
     });
 
     if (statusAtBreakStart === 'in' && statusAtBreakEnd === 'in') {
-        filtered.push({ type: 'out', time: breakStart }, { type: 'in', time: breakEnd });
+        filtered.push({ type: 'out', time: "13:30" }, { type: 'in', time: "14:30" });
     } else if (statusAtBreakStart === 'in') {
-        filtered.push({ type: 'out', time: breakStart });
+        filtered.push({ type: 'out', time: "13:30" });
     } else if (statusAtBreakEnd === 'in') {
-        filtered.push({ type: 'in', time: breakEnd });
+        filtered.push({ type: 'in', time: "14:30" });
     }
 
-    filtered.sort((a, b) => toMinutes(a.time) - toMinutes(b.time));
-    return filtered.map(p => p.time);
+    return filtered.sort((a, b) => toMinutes(a.time) - toMinutes(b.time)).map(p => p.time);
 }
 
 function getStatusAtTime(punches, targetMin) {
     let status = 'out';
     for (const punch of punches) {
-        const timeMin = toMinutes(punch.time);
-        if (timeMin > targetMin) break;
+        if (toMinutes(punch.time) > targetMin) break;
         status = status === 'in' ? 'out' : 'in';
     }
     return status;
@@ -194,8 +191,10 @@ function extractDateAndTime(datetimeStr) {
     const [hour, minute] = timePart.split(":").map(Number);
     if (isNaN(hour) || isNaN(minute)) return null;
 
-    const time = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-    return { date: datePart, time };
+    return {
+        date: datePart,
+        time: `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+    };
 }
 
 function formatDate(date) {

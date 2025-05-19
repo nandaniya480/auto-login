@@ -76,6 +76,11 @@ refreshButton.addEventListener('click', () => {
     chrome.storage.local.set({ timeData }, () => {
       if (result.userId && result.password) {
         triggerLogin(result.userId, result.password);
+
+        refreshButton.textContent = 'Loading...';
+        refreshButton.disabled = true;
+        refreshButton.style.backgroundColor = '#95a5a6';
+
         updateTimeDisplay();
       }
     });
@@ -120,9 +125,6 @@ function updateTimeDisplay() {
     const dateKey = now.toLocaleDateString("en-GB");
     const rawTimes = data[dateKey];
 
-    refreshButton.textContent = 'Loading...';
-    refreshButton.disabled = true;
-    refreshButton.style.backgroundColor = '#95a5a6';
 
     if (!rawTimes || rawTimes.length === 0) {
       updateUI("N/A", "N/A", "N/A", "N/A", now);
