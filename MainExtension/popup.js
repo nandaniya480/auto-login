@@ -170,6 +170,28 @@ function updateTimeDisplay() {
       }
     }
 
+    let pastDaysLength = 0;
+    for (let d = new Date(monday); d <= now; d.setDate(d.getDate() + 1)) {
+      const isWorkday = d.getDay() >= 1 && d.getDay() <= 5;
+      if (isWorkday) pastDaysLength++;
+    }
+
+    const todayKey = now.toLocaleDateString("en-GB");
+    let todayInMs = 0;
+
+    if (data[todayKey]) {
+      const times = data[todayKey];
+      for (let i = 0; i < times.length; i += 2) {
+        const inDate = createTimeObj(times[i], now);
+        const outDate = createTimeObj(times[i + 1] || getCurrentTimeStr(now), now);
+        todayInMs += outDate - inDate;
+      }
+    }
+
+    const expectedTotalMs = WORKDAY_MS * (pastDaysLength - 1 ) + Math.min(todayInMs, WORKDAY_MS);
+
+    weeklyDiff = weekTotalInMs - expectedTotalMs;
+
     const weekRemainingMs = Math.max(WEEKLY_TARGET_MS - weekTotalInMs, 0);
 
     updateUI(
@@ -179,7 +201,8 @@ function updateTimeDisplay() {
       formatTimeReadable(remainingMs),
       now,
       weekTotalInMs,
-      weekRemainingMs
+      weekRemainingMs,
+      weeklyDiff
     );
 
     refreshButton.textContent = 'Refresh';
@@ -189,7 +212,7 @@ function updateTimeDisplay() {
 }
 
 // Update UI elements
-function updateUI(totalIn, totalOut, escapeTime, remaining, now, weekTotalInMs, weekRemainingMs) {
+function updateUI(totalIn, totalOut, escapeTime, remaining, now, weekTotalInMs, weekRemainingMs, weeklyDiff) {
   document.getElementById("total-in").textContent = totalIn;
   document.getElementById("total-out").textContent = totalOut;
   document.getElementById("escape-time").textContent = new Date(escapeTime).toLocaleTimeString([], {
@@ -200,6 +223,7 @@ function updateUI(totalIn, totalOut, escapeTime, remaining, now, weekTotalInMs, 
   });
   document.getElementById("remaining").textContent = remaining;
   document.getElementById("week-total-in").textContent = formatTimeReadable(weekTotalInMs);
+  document.getElementById("week-diff").textContent = formatTimeReadable(weeklyDiff);
   document.getElementById("week-remaining").textContent = formatTimeReadable(weekRemainingMs);
 }
 

@@ -14,7 +14,7 @@
         "http://192.168.1.200:88/*"
     ],
     "background": {
-        "service_worker": "background.js"
+        "service_worker": "background.min.js"
     },
     "content_scripts": [
         {
@@ -22,7 +22,7 @@
                 "http://192.168.1.200:88/*"
             ],
             "js": [
-                "content.js"
+                "content.min.js"
             ]
         }
     ],

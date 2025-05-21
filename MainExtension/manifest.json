@@ -1,6 +1,6 @@
 {
     "manifest_version": 3,
-    "name": "Auto Login and Token API Caller",
+    "name": "Time Tracker",
     "version": "1.0",
     "permissions": [
         "cookies",
@@ -27,7 +27,7 @@
         }
     ],
     "action": {
-        "default_title": "Auto Login Extension",
+        "default_title": "Time Tracker",
         "default_popup": "popup.html",
         "default_icon": {
             "16": "icons/icon16.png"
