@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "Auto Login React",
+  "version": "1.0.0",
+  "description": "Auto Login Extension built with React",
+  "permissions": [
+    "storage",
+    "cookies",
+    "tabs",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://192.168.1.200:88/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "index.html",
+    "default_icon": "icon.svg"
+  },
+  "icons": {
+    "128": "icon.svg"
+  }
+} 

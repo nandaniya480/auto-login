@@ -1,0 +1,232 @@
+// Constants
+const WORKDAY_MS = 8.5 * 60 * 60 * 1000;
+const WEEKLY_TARGET_MS = 42.5 * 60 * 60 * 1000;
+const TEST_HH_MM = "19:24";
+const USE_TEST_TIME = false;
+// const today = new Date('2025-05-16');
+const today = new Date();
+
+// DOM Elements
+const loginForm = document.getElementById('loginForm');
+const timeDisplay = document.getElementById('timeDisplay');
+const userIdInput = document.getElementById('userIdInput');
+const passwordInput = document.getElementById('passwordInput');
+const saveCredsButton = document.getElementById('saveCreds');
+const refreshButton = document.getElementById('refreshButton');
+
+// Time helpers
+function getNow() {
+  const [testH, testM] = TEST_HH_MM.split(':').map(Number);
+  const testDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), testH, testM);
+  return USE_TEST_TIME ? testDate : new Date();
+}
+
+function getCurrentTimeStr(now = getNow()) {
+  return now.toTimeString().slice(0, 5);
+}
+
+function formatTimeReadable(ms) {
+  const totalMinutes = Math.floor(ms / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours}h ${minutes}m`;
+}
+
+function createTimeObj(timeStr, refDate) {
+  const [h, m] = timeStr.split(':').map(Number);
+  return new Date(refDate.getFullYear(), refDate.getMonth(), refDate.getDate(), h, m);
+}
+
+// Initial toggle UI
+chrome.storage.local.get(['userId', 'password', 'timeData'], (result) => {
+  if (result.userId && result.password) {
+    loginForm.style.display = 'none';
+    timeDisplay.style.display = 'block';
+  } else {
+    loginForm.style.display = 'block';
+    timeDisplay.style.display = 'none';
+  }
+});
+
+// Save & Login
+saveCredsButton.addEventListener('click', () => {
+  const userId = userIdInput.value.trim();
+  const password = passwordInput.value.trim();
+
+  if (userId && password) {
+    chrome.storage.local.set({ userId, password }, () => {
+      saveCredsButton.textContent = 'Saved!';
+      saveCredsButton.style.backgroundColor = '#27ae60';
+      triggerLogin(userId, password);
+      setTimeout(() => {
+        loginForm.style.display = 'none';
+        timeDisplay.style.display = 'block';
+        updateTimeDisplay();
+        refreshButton.textContent = 'Loading...';
+        refreshButton.disabled = true;
+        refreshButton.style.backgroundColor = '#95a5a6';
+      }, 1000);
+    });
+  } else {
+    saveCredsButton.textContent = 'Please fill both fields';
+    saveCredsButton.style.backgroundColor = '#e74c3c';
+    setTimeout(() => {
+      saveCredsButton.textContent = 'Save & Login';
+      saveCredsButton.style.backgroundColor = '#2ecc71';
+    }, 2000);
+  }
+});
+
+// Manual refresh
+refreshButton.addEventListener('click', () => {
+  chrome.storage.local.get(['timeData', 'userId', 'password'], (result) => {
+    const timeData = result.timeData || {};
+    const todayKey = today.toLocaleDateString("en-GB");
+    delete timeData[todayKey];
+
+    chrome.storage.local.set({ timeData }, () => {
+      if (result.userId && result.password) {
+        triggerLogin(result.userId, result.password);
+        refreshButton.textContent = 'Loading...';
+        refreshButton.disabled = true;
+        refreshButton.style.backgroundColor = '#95a5a6';
+        updateTimeDisplay();
+      }
+    });
+  });
+});
+
+// Send login message
+function triggerLogin(userId, password) {
+  chrome.runtime.sendMessage({
+    action: "openAndScrape",
+    userId,
+    password
+  });
+}
+
+// Main update function
+function updateTimeDisplay() {
+  chrome.storage.local.get(null, (result) => {
+    const data = result.timeData || {};
+    const now = getNow();
+    const dateKey = now.toLocaleDateString("en-GB");
+    const rawTimes = data[dateKey];
+
+    if (!rawTimes || rawTimes.length === 0) {
+      updateUI("N/A", "N/A", "N/A", "N/A", now, 0, WEEKLY_TARGET_MS);
+      return;
+    }
+
+    let totalInMs = 0;
+    let totalOutMs = 0;
+    let firstIn = null;
+
+    for (let i = 0; i < rawTimes.length; i += 2) {
+      const inTime = rawTimes[i];
+      const outTime = rawTimes[i + 1] || getCurrentTimeStr(now);
+
+      const inDate = createTimeObj(inTime, now);
+      const outDate = createTimeObj(outTime, now);
+
+      if (!firstIn) firstIn = inDate;
+      totalInMs += outDate - inDate;
+
+      if (i + 2 < rawTimes.length) {
+        const nextInDate = createTimeObj(rawTimes[i + 2], now);
+        totalOutMs += nextInDate - outDate;
+      }
+    }
+
+    const ONE_HOUR_MS = 60 * 60 * 1000;
+    let escapeTime = new Date(firstIn?.getTime() + WORKDAY_MS + totalOutMs || now);
+    if (now.getHours() < 13 || (now.getHours() === 13 && now.getMinutes() < 30)) {
+      escapeTime = new Date(escapeTime.getTime() + ONE_HOUR_MS);
+    }
+
+    const remainingMs = Math.max(WORKDAY_MS - totalInMs, 0);
+
+    // Weekly total in-time
+    let weekTotalInMs = 0;
+    const monday = new Date(now);
+    const day = monday.getDay();
+    const diff = monday.getDate() - day + (day === 0 ? -6 : 1); // adjust when Sunday
+    monday.setDate(diff);
+    monday.setHours(0, 0, 0, 0);
+
+    for (const key in data) {
+      const [dd, mm, yyyy] = key.split('/');
+      const entryDate = new Date(`${yyyy}-${mm}-${dd}`);
+      entryDate.setHours(0, 0, 0, 0);
+
+      const isWeekday = entryDate.getDay() >= 1 && entryDate.getDay() <= 6;
+      if (isWeekday && entryDate >= monday && entryDate <= now) {
+        const entries = data[key];
+        for (let i = 0; i < entries.length; i += 2) {
+          const inDate = createTimeObj(entries[i], entryDate);
+          const outDate = createTimeObj(entries[i + 1] || getCurrentTimeStr(), entryDate);
+          weekTotalInMs += outDate - inDate;
+        }
+      }
+    }
+
+    let pastDaysLength = 0;
+    for (let d = new Date(monday); d <= now; d.setDate(d.getDate() + 1)) {
+      const isWorkday = d.getDay() >= 1 && d.getDay() <= 5;
+      if (isWorkday) pastDaysLength++;
+    }
+
+    const todayKey = now.toLocaleDateString("en-GB");
+    let todayInMs = 0;
+
+    if (data[todayKey]) {
+      const times = data[todayKey];
+      for (let i = 0; i < times.length; i += 2) {
+        const inDate = createTimeObj(times[i], now);
+        const outDate = createTimeObj(times[i + 1] || getCurrentTimeStr(now), now);
+        todayInMs += outDate - inDate;
+      }
+    }
+
+    const expectedTotalMs = WORKDAY_MS * (pastDaysLength - 1 ) + Math.min(todayInMs, WORKDAY_MS);
+
+    weeklyDiff = weekTotalInMs - expectedTotalMs;
+
+    const weekRemainingMs = Math.max(WEEKLY_TARGET_MS - weekTotalInMs, 0);
+
+    updateUI(
+      formatTimeReadable(totalInMs),
+      formatTimeReadable(totalOutMs),
+      escapeTime,
+      formatTimeReadable(remainingMs),
+      now,
+      weekTotalInMs,
+      weekRemainingMs,
+      weeklyDiff
+    );
+
+    refreshButton.textContent = 'Refresh';
+    refreshButton.disabled = false;
+    refreshButton.style.backgroundColor = '#2ecc71';
+  });
+}
+
+// Update UI elements
+function updateUI(totalIn, totalOut, escapeTime, remaining, now, weekTotalInMs, weekRemainingMs, weeklyDiff) {
+  document.getElementById("total-in").textContent = totalIn;
+  document.getElementById("total-out").textContent = totalOut;
+  document.getElementById("escape-time").textContent = new Date(escapeTime).toLocaleTimeString([], {
+    hour: '2-digit', minute: '2-digit', hour12: true
+  });
+  document.getElementById("refreshedAt").textContent = now.toLocaleTimeString([], {
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+  });
+  document.getElementById("remaining").textContent = remaining;
+  document.getElementById("week-total-in").textContent = formatTimeReadable(weekTotalInMs);
+  document.getElementById("week-diff").textContent = formatTimeReadable(weeklyDiff);
+  document.getElementById("week-remaining").textContent = formatTimeReadable(weekRemainingMs);
+}
+
+// Auto update every second
+updateTimeDisplay();
+setInterval(updateTimeDisplay, 1000);
