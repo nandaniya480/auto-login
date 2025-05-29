@@ -1,7 +1,9 @@
 // Listener for refreshing data
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === "getSessionIdAndCallAPI") {
-        fetchAndUpdateData(request.token);
+        validateToken(request.token)
+            .then(() => fetchAndUpdateData(request.token))
+            .catch(err => console.error("❌ Error in check or fetch:", err));
     } else if (request.action === "openAndScrape") {
         handleLoginAndScrape(request);
     }
@@ -29,6 +31,7 @@ function handleLoginAndScrape(request) {
 }
 
 function loginToCosec(userId, password) {
+    localStorage.removeItem("SecurityManager.token");
     const userField = document.getElementById('loginid');
     const passField = document.getElementById('pwd');
     const loginButton = document.getElementById('btnlogin');
@@ -37,6 +40,28 @@ function loginToCosec(userId, password) {
         userField.value = userId;
         passField.value = password;
         loginButton.click();
+    }
+}
+
+async function validateToken(token) {
+    const url = "http://192.168.1.200:88";
+    const apiUrl = `${url}/cosec/api/NPunchView/getDataListOnPageLoad?MenuID=12053&token=${encodeURIComponent(token)}`;
+
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json, text/plain, */*',
+                'Referer': `${url}/COSEC/Default/Default`
+            },
+        });
+
+        const data = await response.json();
+        console.log("✅ API response (check):", data);
+        return data;
+    } catch (err) {
+        console.error("❌ Failed to fetch getDataListOnPageLoad:", err);
+        throw err;
     }
 }
 
@@ -86,21 +111,14 @@ async function processPunchData(token, sessionId, userId, password, resolve) {
         datesToFetch.unshift(formatDate(lastFriday));
     }
 
-    console.log('datesToFetch', datesToFetch);
-
     const workingDays = datesToFetch.filter(dateStr => {
         const day = new Date(dateStr).getDay();
         return day !== 0 && day !== 6;
     });
 
-    console.log('workingDays', workingDays);
-
     const lastTwoWorkingDays = workingDays.slice(-2);
-    console.log('lastTwoWorkingDays', lastTwoWorkingDays);
 
     const allUniqueDates = Array.from(new Set([...workingDays, ...lastTwoWorkingDays]));
-
-    console.log('allUniqueDates', allUniqueDates);
 
     const { generated } = await chrome.storage.local.get('generated');
     const finalData = {};
