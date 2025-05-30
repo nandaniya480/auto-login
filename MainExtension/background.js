@@ -7,6 +7,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     } else if (request.action === "openAndScrape") {
         handleLoginAndScrape(request);
     }
+     return true;
 });
 
 function handleLoginAndScrape(request) {
@@ -61,6 +62,7 @@ async function validateToken(token) {
         return data;
     } catch (err) {
         console.error("❌ Failed to fetch getDataListOnPageLoad:", err);
+        chrome.storage.local.set("apiError", "true");
         throw err;
     }
 }
@@ -68,6 +70,9 @@ async function validateToken(token) {
 function fetchAndUpdateData(token) {
     return new Promise((resolve) => {
         const url = "http://192.168.1.200:88";
+
+        // Reset the error flag at the start
+        chrome.storage.local.remove("apiError");
 
         Promise.all([
             getCookie(url, "ASP.NET_SessionId"),
@@ -93,7 +98,6 @@ function getCookie(url, name) {
 
 async function processPunchData(token, sessionId, userId, password, resolve) {
     const today = new Date();
-    // const today = new Date('2025-05-16'); // e.g., Monday
     const currentDay = today.getDay(); // 0 (Sun) - 6 (Sat)
     const monday = new Date(today);
     monday.setDate(today.getDate() - ((currentDay + 6) % 7));
@@ -117,7 +121,6 @@ async function processPunchData(token, sessionId, userId, password, resolve) {
     });
 
     const lastTwoWorkingDays = workingDays.slice(-2);
-
     const allUniqueDates = Array.from(new Set([...workingDays, ...lastTwoWorkingDays]));
 
     const { generated } = await chrome.storage.local.get('generated');
@@ -181,6 +184,7 @@ async function fetchPunchDataForDate(token, sessionId, userId, password, dateStr
         })
         .catch(err => {
             console.error(`Error fetching data for ${dateStr}`, err);
+            chrome.storage.local.set("apiError", "true");
             callback({ [dateStr]: [] });
         });
 }
@@ -276,6 +280,7 @@ function sendToSheet(data, callback) {
         .then(res => callback(res))
         .catch(err => {
             console.error("Web App error:", err);
+            chrome.storage.local.set("apiError", "true");
             callback({ status: "error", error: err.message });
         });
 }

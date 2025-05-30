@@ -3,7 +3,6 @@ const WORKDAY_MS = 8.5 * 60 * 60 * 1000;
 const WEEKLY_TARGET_MS = 42.5 * 60 * 60 * 1000;
 const TEST_HH_MM = "19:24";
 const USE_TEST_TIME = false;
-// const today = new Date('2025-05-16');
 const today = new Date();
 
 // DOM Elements
@@ -13,6 +12,19 @@ const userIdInput = document.getElementById('userIdInput');
 const passwordInput = document.getElementById('passwordInput');
 const saveCredsButton = document.getElementById('saveCreds');
 const refreshButton = document.getElementById('refreshButton');
+const errorBox = document.getElementById('errorBox');
+
+// Show error
+function showError(message) {
+  errorBox.textContent = message;
+  errorBox.style.display = 'block';
+}
+
+// Hide error
+function hideError() {
+  errorBox.textContent = '';
+  errorBox.style.display = 'none';
+}
 
 // Time helpers
 function getNow() {
@@ -52,6 +64,7 @@ chrome.storage.local.get(['userId', 'password', 'timeData'], (result) => {
 saveCredsButton.addEventListener('click', () => {
   const userId = userIdInput.value.trim();
   const password = passwordInput.value.trim();
+  hideError();
 
   if (userId && password) {
     chrome.storage.local.set({ userId, password }, () => {
@@ -68,6 +81,7 @@ saveCredsButton.addEventListener('click', () => {
       }, 1000);
     });
   } else {
+    showError('Please fill both User ID and Password');
     saveCredsButton.textContent = 'Please fill both fields';
     saveCredsButton.style.backgroundColor = '#e74c3c';
     setTimeout(() => {
@@ -86,22 +100,29 @@ refreshButton.addEventListener('click', () => {
 
     chrome.storage.local.set({ timeData }, () => {
       if (result.userId && result.password) {
+        hideError();
         triggerLogin(result.userId, result.password);
         refreshButton.textContent = 'Loading...';
         refreshButton.disabled = true;
         refreshButton.style.backgroundColor = '#95a5a6';
         updateTimeDisplay();
+      } else {
+        showError('Stored credentials not found.');
       }
     });
   });
 });
 
-// Send login message
+// Trigger background scrape
 function triggerLogin(userId, password) {
   chrome.runtime.sendMessage({
     action: "openAndScrape",
     userId,
     password
+  }, (response) => {
+    if (response && response.error) {
+      showError(response.error);
+    }
   });
 }
 
@@ -146,11 +167,11 @@ function updateTimeDisplay() {
 
     const remainingMs = Math.max(WORKDAY_MS - totalInMs, 0);
 
-    // Weekly total in-time
+    // Weekly total
     let weekTotalInMs = 0;
     const monday = new Date(now);
     const day = monday.getDay();
-    const diff = monday.getDate() - day + (day === 0 ? -6 : 1); // adjust when Sunday
+    const diff = monday.getDate() - day + (day === 0 ? -6 : 1);
     monday.setDate(diff);
     monday.setHours(0, 0, 0, 0);
 
@@ -172,8 +193,7 @@ function updateTimeDisplay() {
 
     let pastDaysLength = 0;
     for (let d = new Date(monday); d <= now; d.setDate(d.getDate() + 1)) {
-      const isWorkday = d.getDay() >= 1 && d.getDay() <= 5;
-      if (isWorkday) pastDaysLength++;
+      if (d.getDay() >= 1 && d.getDay() <= 5) pastDaysLength++;
     }
 
     const todayKey = now.toLocaleDateString("en-GB");
@@ -188,10 +208,8 @@ function updateTimeDisplay() {
       }
     }
 
-    const expectedTotalMs = WORKDAY_MS * (pastDaysLength - 1 ) + Math.min(todayInMs, WORKDAY_MS);
-
-    weeklyDiff = weekTotalInMs - expectedTotalMs;
-
+    const expectedTotalMs = WORKDAY_MS * (pastDaysLength - 1) + Math.min(todayInMs, WORKDAY_MS);
+    const weeklyDiff = weekTotalInMs - expectedTotalMs;
     const weekRemainingMs = Math.max(WEEKLY_TARGET_MS - weekTotalInMs, 0);
 
     updateUI(
@@ -211,7 +229,6 @@ function updateTimeDisplay() {
   });
 }
 
-// Update UI elements
 function updateUI(totalIn, totalOut, escapeTime, remaining, now, weekTotalInMs, weekRemainingMs, weeklyDiff) {
   document.getElementById("total-in").textContent = totalIn;
   document.getElementById("total-out").textContent = totalOut;
@@ -227,6 +244,6 @@ function updateUI(totalIn, totalOut, escapeTime, remaining, now, weekTotalInMs, 
   document.getElementById("week-remaining").textContent = formatTimeReadable(weekRemainingMs);
 }
 
-// Auto update every second
+// Initial call and auto-update every second
 updateTimeDisplay();
 setInterval(updateTimeDisplay, 1000);
