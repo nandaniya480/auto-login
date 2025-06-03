@@ -4,6 +4,7 @@ const WEEKLY_TARGET_MS = 42.5 * 60 * 60 * 1000;
 const TEST_HH_MM = "19:24";
 const USE_TEST_TIME = false;
 const today = new Date();
+const now = getNow();
 
 // DOM Elements
 const loginForm = document.getElementById('loginForm');
@@ -226,6 +227,9 @@ function updateTimeDisplay() {
       weekRemainingMs,
       weeklyDiff
     );
+    const minutes = totalInMs / (60 * 1000);
+
+    updateWorkClock(minutes);
 
     refreshButton.textContent = 'Refresh';
     refreshButton.disabled = false;
@@ -246,6 +250,22 @@ function updateUI(totalIn, totalOut, escapeTime, remaining, now, weekTotalInMs, 
   document.getElementById("week-total-in").textContent = formatTimeReadable(weekTotalInMs);
   document.getElementById("week-diff").textContent = formatTimeReadable(weeklyDiff);
   document.getElementById("week-remaining").textContent = formatTimeReadable(weekRemainingMs);
+}
+
+function updateWorkClock(totalIn) {
+  const now = getNow();
+  const maxMinutes = 8.5 * 60;
+  const progress = Math.min(totalIn, maxMinutes) / maxMinutes;
+
+  const degrees = progress * 360;
+
+  document.querySelector('.hand.hour').style.transform = `translateX(-50%) rotate(${degrees}deg)`;
+
+  document.querySelector('.hand.minute').style.display = 'none';
+  const sec = now.getSeconds();
+  const secDeg = sec * 6;
+
+  document.querySelector('.hand.second').style.transform = `translateX(-50%) rotate(${secDeg}deg)`;
 }
 
 // Initial call and auto-update every second

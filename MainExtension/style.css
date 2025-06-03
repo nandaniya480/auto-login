@@ -91,8 +91,57 @@ body {
 }
 
 /* Animation for transitions */
-#loginForm, #timeDisplay {
+#loginForm,
+#timeDisplay {
     transition: opacity 0.3s ease-in-out;
+}
+
+
+.analog-clock {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    border: 4px solid #2c3e50;
+    border-radius: 50%;
+    background: #ecf0f1;
+}
+
+.hand {
+    position: absolute;
+    bottom: 50%;
+    left: 50%;
+    transform-origin: bottom center;
+    transform: translateX(-50%) rotate(0deg);
+    border-radius: 2px;
+}
+
+.hand.hour {
+    width: 4px;
+    height: 18px;
+    background: #2c3e50;
+}
+
+.hand.minute {
+    width: 3px;
+    height: 24px;
+    background: #34495e;
+}
+
+.hand.second {
+    width: 2px;
+    height: 28px;
+    background: #e74c3c;
+}
+
+.center-dot {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: #2c3e50;
+    border-radius: 50%;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
 
 /* Responsive adjustments */
@@ -101,11 +150,11 @@ body {
         width: 280px;
         padding: 12px;
     }
-    
+
     .big-time {
         font-size: 28px;
     }
-    
+
     .row {
         font-size: 13px;
     }

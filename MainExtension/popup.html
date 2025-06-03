@@ -19,6 +19,7 @@
       style="padding: 6px 12px; background-color: #2ecc71; color: white; border: none; border-radius: 6px; cursor: pointer;">
       Save & Login</button>
   </div>
+
   <div id="errorBox"
     style="display: none; margin-bottom: 10px; padding: 10px; background-color: #e74c3c; color: white; border-radius: 5px;">
     <!-- Error message will appear here -->
@@ -26,7 +27,19 @@
 
   <!-- Time Display Card -->
   <div id="timeDisplay" class="card">
-    <div id="total-in" class="big-time">00:00</div>
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <div id="total-in" class="big-time">00:00</div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 10px;">
+
+      <div id="analogClock" class="analog-clock">
+        <div class="hand hour"></div>
+        <div class="hand minute"></div>
+        <div class="hand second"></div>
+        <div class="center-dot"></div>
+      </div>
+    </div>
     <div class="row"><span>Total out-time:</span> <span id="total-out">00:00</span></div>
     <div class="row"><span>Remaining time:</span> <span id="remaining">00:00</span></div>
     <div class="row"><span>Escape time:</span> <span id="escape-time">--:--</span></div>
