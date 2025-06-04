@@ -96,9 +96,7 @@ function getCookie(url, name) {
     });
 }
 
-function parseDateSafe(dateStr) {
-    return new Date(dateStr + 'T00:00:00');
-}
+
 
 async function processPunchData(token, sessionId, userId, password, resolve) {
     const today = new Date();
@@ -111,19 +109,18 @@ async function processPunchData(token, sessionId, userId, password, resolve) {
         const date = new Date(monday);
         date.setDate(monday.getDate() + i);
         if (date <= today) {
-            datesToFetch.push(formatDate(date));
+            datesToFetch.push(date);
         }
     }
 
     if (currentDay === 1) {
         const lastFriday = new Date(today);
         lastFriday.setDate(today.getDate() - 3);
-        datesToFetch.unshift(formatDate(lastFriday));
+        datesToFetch.unshift(lastFriday);
     }
 
     const workingDays = datesToFetch.filter(dateStr => {
-        const dateObj = parseDateSafe(dateStr);
-        const day = dateObj.getDay();
+        const day = dateStr.getDay();
         return day !== 0 && day !== 6;
     });
 
@@ -166,6 +163,8 @@ function closeGeneratedTab() {
 async function fetchPunchDataForDate(token, sessionId, userId, password, dateStr, callback) {
     const apiUrl = `http://192.168.1.200:88/cosec/api/NPunchView/changePDateSelection/?token=${token}`;
     const { userId: storedUserId } = await chrome.storage.local.get('userId');
+
+    dateStr = formatDate(dateStr);
 
     const payload = {
         UserId: storedUserId,
