@@ -15,6 +15,31 @@ const saveCredsButton = document.getElementById('saveCreds');
 const refreshButton = document.getElementById('refreshButton');
 const errorBox = document.getElementById('errorBox');
 
+
+const container = document.getElementById("analogClock");
+const totalHours = 8.5;
+const totalDegrees = 30 * totalHours;
+const centerX = 50;
+const centerY = 50;
+const radius = 40;
+
+for (let i = 1; i <= totalHours; i++) {
+  const hour = i;
+  const number = document.createElement("div");
+  number.className = "hour-number";
+  number.innerText = hour;
+
+  const angle = ((hour - 1) / (totalHours - 1)) * totalDegrees;
+  const angleRad = (angle - totalDegrees) * (Math.PI / 136);
+
+  const x = centerX + radius * Math.sin(angleRad) - 10;
+  const y = centerY - radius * Math.cos(angleRad) - 10;
+
+  number.style.left = `${x}px`;
+  number.style.top = `${y}px`;
+  container.appendChild(number);
+}
+
 // Show error
 function showError(message) {
   errorBox.textContent = message;
