@@ -27,19 +27,17 @@
 
   <!-- Time Display Card -->
   <div id="timeDisplay" class="card">
-    <div style="display: flex; align-items: center; gap: 10px;">
+    <!-- <div style="display: flex; align-items: center; gap: 10px;">
       <div id="total-in" class="big-time">00:00</div>
-    </div>
+    </div> -->
 
-    <div style="display: flex; align-items: center; gap: 10px;">
-
-      <div id="analogClock" class="analog-clock">
-        <div class="hand hour"></div>
-        <div class="hand minute"></div>
-        <div class="hand second"></div>
-        <div class="center-dot"></div>
-      </div>
+    <div id="analogClock" class="analog-clock">
+      <div class="hand hour"></div>
+      <div class="hand minute"></div>
+      <div class="hand second"></div>
+      <div class="center-dot"></div>
     </div>
+    <div class="row"><span>Total in-time:</span> <span id="total-in">00:00</span></div>
     <div class="row"><span>Total out-time:</span> <span id="total-out">00:00</span></div>
     <div class="row"><span>Remaining time:</span> <span id="remaining">00:00</span></div>
     <div class="row"><span>Escape time:</span> <span id="escape-time">--:--</span></div>
@@ -49,7 +47,7 @@
     <div class="row"><span>Weekly Difference:</span> <span id="week-diff">00:00</span></div>
     <div class="row"><span>Remaining Weekly Time:</span> <span id="week-remaining">00:00</span></div>
 
-    <div class="row"><span>Refreshed At:</span> <span id="refreshedAt">00:00</span></div>
+    <!-- <div class="row"><span>Refreshed At:</span> <span id="refreshedAt">00:00</span></div> -->
     <button id="refreshButton"
       style="margin-top: 10px; padding: 6px 12px; background-color: #3498db; color: white; border: none; border-radius: 6px; cursor: pointer; width: 100%;">
       Refresh Today data

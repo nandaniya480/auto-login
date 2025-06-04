@@ -96,7 +96,6 @@ body {
     transition: opacity 0.3s ease-in-out;
 }
 
-
 .analog-clock {
     position: relative;
     width: 60px;
@@ -104,6 +103,10 @@ body {
     border: 4px solid #2c3e50;
     border-radius: 50%;
     background: #ecf0f1;
+    margin: 16px auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .hand {
@@ -122,9 +125,9 @@ body {
 }
 
 .hand.minute {
-    width: 3px;
-    height: 24px;
-    background: #34495e;
+    width: 4px;
+    height: 18px;
+    background: #67dc4a;
 }
 
 .hand.second {

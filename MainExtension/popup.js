@@ -243,9 +243,9 @@ function updateUI(totalIn, totalOut, escapeTime, remaining, now, weekTotalInMs, 
   document.getElementById("escape-time").textContent = new Date(escapeTime).toLocaleTimeString([], {
     hour: '2-digit', minute: '2-digit', hour12: true
   });
-  document.getElementById("refreshedAt").textContent = now.toLocaleTimeString([], {
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
-  });
+  // document.getElementById("refreshedAt").textContent = now.toLocaleTimeString([], {
+  //   hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+  // });
   document.getElementById("remaining").textContent = remaining;
   document.getElementById("week-total-in").textContent = formatTimeReadable(weekTotalInMs);
   document.getElementById("week-diff").textContent = formatTimeReadable(weeklyDiff);
@@ -255,17 +255,27 @@ function updateUI(totalIn, totalOut, escapeTime, remaining, now, weekTotalInMs, 
 function updateWorkClock(totalIn) {
   const now = getNow();
   const maxMinutes = 8.5 * 60;
-  const progress = Math.min(totalIn, maxMinutes) / maxMinutes;
+  const secDeg = now.getSeconds() * 6;
 
-  const degrees = progress * 360;
+  const hourHand = document.querySelector('.hand.hour');
+  const minuteHand = document.querySelector('.hand.minute');
+  const secondHand = document.querySelector('.hand.second');
 
-  document.querySelector('.hand.hour').style.transform = `translateX(-50%) rotate(${degrees}deg)`;
-
-  document.querySelector('.hand.minute').style.display = 'none';
-  const sec = now.getSeconds();
-  const secDeg = sec * 6;
-
-  document.querySelector('.hand.second').style.transform = `translateX(-50%) rotate(${secDeg}deg)`;
+  if (totalIn > maxMinutes) {
+    const extraDeg = ((totalIn - maxMinutes) / 60) * 360;
+    hourHand.style.display = 'none';
+    minuteHand.style.display = 'block';
+    minuteHand.style.backgroundColor = '#27ae60';
+    minuteHand.style.transform = `translateX(-50%) rotate(${extraDeg}deg)`;
+  } else {
+    const hourDeg = (totalIn / maxMinutes) * 360;
+    hourHand.style.display = 'block';
+    hourHand.style.transform = `translateX(-50%) rotate(${hourDeg}deg)`;
+    minuteHand.style.display = 'none';
+    minuteHand.style.backgroundColor = '';
+    minuteHand.style.transform = `translateX(-50%) rotate(0deg)`;
+  }
+  secondHand.style.transform = `translateX(-50%) rotate(${secDeg}deg)`;
 }
 
 // Initial call and auto-update every second

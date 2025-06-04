@@ -7,7 +7,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     } else if (request.action === "openAndScrape") {
         handleLoginAndScrape(request);
     }
-     return true;
+    return true;
 });
 
 function handleLoginAndScrape(request) {
@@ -96,9 +96,13 @@ function getCookie(url, name) {
     });
 }
 
+function parseDateSafe(dateStr) {
+    return new Date(dateStr + 'T00:00:00');
+}
+
 async function processPunchData(token, sessionId, userId, password, resolve) {
     const today = new Date();
-    const currentDay = today.getDay(); // 0 (Sun) - 6 (Sat)
+    const currentDay = today.getDay();
     const monday = new Date(today);
     monday.setDate(today.getDate() - ((currentDay + 6) % 7));
 
@@ -106,7 +110,9 @@ async function processPunchData(token, sessionId, userId, password, resolve) {
     for (let i = 0; i < 5; i++) {
         const date = new Date(monday);
         date.setDate(monday.getDate() + i);
-        if (date <= today) datesToFetch.push(formatDate(date));
+        if (date <= today) {
+            datesToFetch.push(formatDate(date));
+        }
     }
 
     if (currentDay === 1) {
@@ -116,7 +122,8 @@ async function processPunchData(token, sessionId, userId, password, resolve) {
     }
 
     const workingDays = datesToFetch.filter(dateStr => {
-        const day = new Date(dateStr).getDay();
+        const dateObj = parseDateSafe(dateStr);
+        const day = dateObj.getDay();
         return day !== 0 && day !== 6;
     });
 
