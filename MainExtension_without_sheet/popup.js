@@ -4,6 +4,7 @@ const WEEKLY_TARGET_MS = 42.5 * 60 * 60 * 1000;
 const TEST_HH_MM = "19:24";
 const USE_TEST_TIME = false;
 const today = new Date();
+const now = getNow();
 
 // DOM Elements
 const loginForm = document.getElementById('loginForm');
@@ -38,10 +39,14 @@ function getCurrentTimeStr(now = getNow()) {
 }
 
 function formatTimeReadable(ms) {
+  const isNegative = ms < 0;
+  ms = Math.abs(ms);
   const totalMinutes = Math.floor(ms / 60000);
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  return `${hours}h ${minutes}m`;
+
+  const formatted = `${hours}h ${minutes}m`;
+  return isNegative ? `-${formatted}` : formatted;
 }
 
 function createTimeObj(timeStr, refDate) {
