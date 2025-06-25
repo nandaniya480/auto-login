@@ -130,10 +130,21 @@ body {
     background: #67dc4a;
 }
 
-.hand.second {
+/* .hand.second {
     width: 2px;
     height: 40px;
     background: #e74c3c;
+} */
+
+.hand.second {
+    width: 8px;
+    height: 8px;
+    background: #e74c3c;
+    border-radius: 50%;
+    top: 10%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(0deg);
+    transform-origin: center 40px;
 }
 
 .center-dot {

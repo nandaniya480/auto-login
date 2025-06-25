@@ -273,7 +273,15 @@ function updateUI(totalIn, totalOut, escapeTime, remaining, now, weekTotalInMs, 
   // });
   document.getElementById("remaining").textContent = remaining;
   document.getElementById("week-total-in").textContent = formatTimeReadable(weekTotalInMs);
-  document.getElementById("week-diff").textContent = formatTimeReadable(weeklyDiff);
+  let weeklyDiffText = "";
+  if (weeklyDiff > 0) {
+    weeklyDiffText = `▲ ${formatTimeReadable(weeklyDiff)}`;
+  } else if (weeklyDiff < 0) {
+    weeklyDiffText = `▼ ${formatTimeReadable(weeklyDiff)}`;
+  } else {
+    weeklyDiffText = formatTimeReadable(weeklyDiff);
+  }
+  document.getElementById("week-diff").textContent = weeklyDiffText
   document.getElementById("week-remaining").textContent = formatTimeReadable(weekRemainingMs);
 }
 
