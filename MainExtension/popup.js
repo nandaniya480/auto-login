@@ -37,7 +37,7 @@ for (let i = 1; i <= totalHours; i++) {
 
   number.style.left = `${x}px`;
   number.style.top = `${y}px`;
-  container.appendChild(number);
+  // container.appendChild(number);
 }
 
 // Show error
@@ -254,7 +254,7 @@ function updateTimeDisplay() {
     );
     const minutes = totalInMs / (60 * 1000);
 
-    updateWorkClock(minutes);
+    // updateWorkClock(minutes);
 
     refreshButton.textContent = 'Refresh';
     refreshButton.disabled = false;

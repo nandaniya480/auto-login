@@ -96,7 +96,6 @@ async function initializeClock() {
     }
 
     // Initial clock display
-    displayClock();
     updateanalogclock();
 
     // Start or stop clocks based on clock type and visibility state
@@ -117,8 +116,6 @@ async function initializeClock() {
         }
     });
 
-    function displayClock() {
-        const analogClock = document.getElementById("analogClock");
-        analogClock.style.display = "block";
-    }
+    const analogClock = document.getElementById("analogClock");
+    analogClock.style.display = "block";
 }

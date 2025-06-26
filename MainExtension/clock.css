@@ -1,0 +1,146 @@
+/* Font and global reset */
+@font-face {
+    font-family: poppins;
+    src: url("./fonts/Poppins-Regular.ttf") format("truetype");
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+    font-family: var(--main-font-family);
+}
+
+/* Root variables */
+:root {
+    --main-font-family: "poppins", "Poppins", sans-serif;
+    --bg-color-blue: #bbd6fd;
+    --accentLightTint-blue: #e2eeff;
+    --darkerColor-blue: #3569b2;
+    --darkColor-blue: #4382ec;
+}
+
+/* Clock container */
+#analogClock {
+    /* border-radius: 100%; */
+    position: relative;
+    /* width: 45%; */
+    /* margin-left: 5%; */
+    /* aspect-ratio: 1; */
+    /* height: auto; */
+}
+
+/* SVG animation */
+#analogClock svg {
+    /* position: absolute; */
+    animation: 1s clockAnm;
+}
+
+@keyframes clockAnm {
+    from { transform: rotate(40deg); }
+    to { transform: rotate(0); }
+}
+
+/* Clock background */
+.bgLightTint {
+    fill: var(--accentLightTint-blue);
+    background-color: var(--accentLightTint-blue);
+}
+
+/* Center point of the clock */
+.clock .centerPoint {
+    width: 20px;
+    height: 20px;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+}
+
+/* Clock hands */
+.clock .centerPoint .sui {
+    position: absolute;
+    background-color: var(--darkColor-blue);
+    transform-origin: bottom;
+}
+
+#hour {
+    transform: rotate(90deg);
+    height: 400%;
+    top: -350%;
+    background-color: var(--darkerColor-blue);
+    transition: transform 1.5s;
+}
+
+#hour::after {
+    content: "";
+    position: absolute;
+    bottom: -10px;
+    border-radius: 100px;
+    background-color: var(--darkerColor-blue);
+    width: 100%;
+    aspect-ratio: 0.5;
+    height: auto;
+}
+
+#minute {
+    transition: transform 1.5s;
+    z-index: 9 !important;
+}
+
+#minute::after {
+    content: "";
+    position: absolute;
+    bottom: -10px;
+    border-radius: 100px;
+    background-color: var(--darkColor-blue);
+    width: 100%;
+    aspect-ratio: 0.5;
+    height: auto;
+}
+
+#second {
+    background-color: transparent;
+    transition: transform 1s;
+}
+
+#second::after {
+    content: "";
+    position: absolute;
+    top: -28px;
+    border-radius: 100%;
+    background-color: var(--darkColor-blue);
+    width: 100%;
+    aspect-ratio: 1;
+    height: auto;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 500px) {
+    .clock .centerPoint {
+        width: calc(20% / 3);
+        height: calc(20% / 3);
+    }
+
+    .clock .centerPoint .sui {
+        height: 500%;
+        width: 100%;
+        top: -450%;
+        border-radius: 60px;
+    }
+
+    #second::after {
+        width: 100%;
+        top: calc(-160% / 7);
+    }
+
+    #hour::after,
+    #minute::after {
+        width: 100%;
+        aspect-ratio: 0.5;
+        height: auto;
+    }
+}
